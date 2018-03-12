@@ -19,10 +19,9 @@ subdirs = [
 ]
 
 cc_binary {
-    name: "citadel_tests",
+    name: "citadel_integration_tests",
     defaults: [
         "nos_cc_hw_defaults",
-        "libnosprotos_defaults",
     ],
     cflags: ["-Wno-c99-extensions"],
     srcs: [
@@ -61,7 +60,6 @@ cc_binary {
     name: "stress_test",
     defaults: [
         "nos_cc_hw_defaults",
-        "libnosprotos_defaults",
     ],
     srcs: [
         "src/stress_test.cc",

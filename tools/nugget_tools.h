@@ -22,6 +22,8 @@ bool RebootNugget(nos::NuggetClientInterface *client, uint8_t type);
 // Returns an underestimate of the number of seconds waited.
 uint32_t WaitForSleep();
 
+bool WipeUserData(nos::NuggetClientInterface *client);
+
 }  // namespace nugget_tools
 
 #endif  // NUGGET_TOOLS_H

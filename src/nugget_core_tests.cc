@@ -60,6 +60,10 @@ TEST_F(NuggetCoreTest, HardRebootTest) {
   ASSERT_TRUE(nugget_tools::RebootNugget(client.get(), NUGGET_REBOOT_HARD));
 }
 
+TEST_F(NuggetCoreTest, WipeUserData) {
+  ASSERT_TRUE(nugget_tools::WipeUserData(client.get()));
+}
+
 TEST_F(NuggetCoreTest, GetLowPowerStats) {
   struct nugget_app_low_power_stats stats;
   vector<uint8_t> buffer;
