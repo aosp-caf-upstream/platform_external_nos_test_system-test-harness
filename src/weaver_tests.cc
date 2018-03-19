@@ -43,14 +43,16 @@ class WeaverTest: public testing::Test {
   void activateThrottle(uint32_t slot, const uint8_t *key,
                         const uint8_t *wrong_key, uint32_t throttle_sec);
  public:
-  const size_t KEY_SIZE = 16;
-  const size_t VALUE_SIZE = 16;
-  const uint8_t TEST_KEY[16] = {1, 2, 3, 4, 5, 6, 7, 8,
-                                9, 10, 11, 12, 13, 14, 15, 16};
-  const uint8_t TEST_VALUE[16] = {1, 0, 3, 0, 5, 0, 7, 0,
-                                  0, 10, 0, 12, 0, 14, 0, 16};
-  const uint8_t WRONG_KEY[16] = {100, 2, 3, 4, 5, 6, 7, 8,
-                                 9, 10, 11, 12, 13, 14, 15, 16};
+  static constexpr size_t KEY_SIZE = 16;
+  static constexpr size_t VALUE_SIZE = 16;
+  const uint8_t TEST_KEY[KEY_SIZE] = {1, 2, 3, 4, 5, 6, 7, 8,
+                                      9, 10, 11, 12, 13, 14, 15, 16};
+  const uint8_t WRONG_KEY[KEY_SIZE] = {100, 2, 3, 4, 5, 6, 7, 8,
+                                       9, 10, 11, 12, 13, 14, 15, 16};
+  const uint8_t TEST_VALUE[VALUE_SIZE] = {1, 0, 3, 0, 5, 0, 7, 0,
+                                          0, 10, 0, 12, 0, 14, 0, 16};
+  const uint8_t ZERO_VALUE[VALUE_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0,
+                                          0, 0, 0, 0, 0, 0, 0, 0};
 };
 
 std::random_device WeaverTest::random_number_generator;
@@ -304,5 +306,10 @@ TEST_F(WeaverTest, EraseValueInvalidSlot) {
   ASSERT_EQ(service.EraseValue(request, nullptr), APP_ERROR_BOGUS_ARGS);
 }
 
+TEST_F(WeaverTest, WipeUserDataOnlyClearsValues) {
+  testWrite(__STAMP__, WeaverTest::slot, TEST_KEY, TEST_VALUE);
+  ASSERT_TRUE(nugget_tools::WipeUserData(client.get()));
+  testRead(__STAMP__, WeaverTest::slot, TEST_KEY, ZERO_VALUE);
+}
 
 }  // namespace
