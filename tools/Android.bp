@@ -17,15 +17,22 @@
 cc_library {
     name: "nugget_tools",
     srcs: [
+        "avb_tools.cc",
         "nugget_tools.cc",
     ],
     header_libs: [
         "nos_headers",
     ],
+    static_libs: [
+        "libgtest",
+    ],
     shared_libs: [
         "libnos",
         "libnos_client_citadel",
         "libnos_citadeld_proxy",
+        "libnosprotos",
+        "libprotobuf-cpp-full",
+        "nos_app_avb",
     ],
     defaults: ["nos_cc_defaults"],
     export_include_dirs: ["."],

@@ -302,7 +302,7 @@ int TestHarness::GetAhdlc(raw_message* msg, microseconds timeout) {
         }
         return TRANSPORT_ERROR;
       } else if (decoder.frame_info.buffer_index >= PROTO_BUFFER_MAX_LEN) {
-        if (AhdlcDecoderInit(&decoder, CRC16) != AHDLC_OK) {
+        if (AhdlcDecoderInit(&decoder, CRC16, NULL) != AHDLC_OK) {
           FatalError("AhdlcDecoderInit()");
         }
         if (verbosity >= ERROR) {
@@ -367,7 +367,7 @@ void TestHarness::Init(const char* path) {
 
     decoder.buffer_len = input_buffer.size();
     decoder.pdu_buffer = input_buffer.data();
-    if (AhdlcDecoderInit(&decoder, CRC16) != AHDLC_OK) {
+    if (AhdlcDecoderInit(&decoder, CRC16, NULL) != AHDLC_OK) {
       FatalError("AhdlcDecoderInit()");
     }
   }

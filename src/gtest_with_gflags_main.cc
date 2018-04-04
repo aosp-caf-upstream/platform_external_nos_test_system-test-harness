@@ -17,6 +17,7 @@ DEFINE_bool(disable_slow_tests, false, "Enables a filter to disable a set of slo
 
 int main(int argc, char** argv) {
   const std::vector<std::string> slow_tests{
+      "AvbTest.*",
       "ImportKeyTest.RSASuccess",
       "NuggetCoreTest.HardRebootTest",
       "WeaverTest.WriteHardRebootRead",

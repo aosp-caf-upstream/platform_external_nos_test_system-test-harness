@@ -23,8 +23,13 @@ cc_binary {
     defaults: [
         "nos_cc_hw_defaults",
     ],
-    cflags: ["-Wno-c99-extensions"],
+    cflags: [
+        "-Wno-c99-extensions",
+        "-Wno-gnu-anonymous-struct",
+        "-Wno-nested-anon-types",
+    ],
     srcs: [
+        "src/avb_tests.cc",
         "src/aes-cmac-tests.cc",
         "src/gtest_with_gflags_main.cc",
         "src/keymaster-import-key-tests.cc",
@@ -50,6 +55,7 @@ cc_binary {
         "libnosprotos",
         "libprotobuf-cpp-full",
         "libssl",
+        "nos_app_avb",
         "nos_app_keymaster",
         "nos_app_weaver",
         "nugget_tools",
