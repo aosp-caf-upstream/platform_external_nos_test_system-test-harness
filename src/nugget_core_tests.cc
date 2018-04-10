@@ -44,12 +44,27 @@ void NuggetCoreTest::TearDownTestCase() {
   client = unique_ptr<nos::NuggetClientInterface>();
 }
 
-// ./test_app --id 0 -p 0 -a
 TEST_F(NuggetCoreTest, GetVersionStringTest) {
   input_buffer.resize(0);
   ASSERT_NO_ERROR(NuggetCoreTest::client->CallApp(
       APP_ID_NUGGET, NUGGET_PARAM_VERSION, input_buffer, &output_buffer));
   ASSERT_GT(output_buffer.size(), 0u);
+}
+
+TEST_F(NuggetCoreTest, GetDeviceIdTest) {
+  input_buffer.resize(0);
+  ASSERT_NO_ERROR(NuggetCoreTest::client->CallApp(
+      APP_ID_NUGGET, NUGGET_PARAM_DEVICE_ID, input_buffer, &output_buffer));
+  ASSERT_EQ(output_buffer.size(), 18u);
+  for (size_t i = 0; i < output_buffer.size(); i++) {
+    if (i == 8) {
+      ASSERT_EQ(output_buffer[i], ':');
+    } else if (i == 17) {
+      ASSERT_EQ(output_buffer[i], '\0');
+    } else {
+      ASSERT_TRUE(std::isxdigit(output_buffer[i]));
+    }
+  }
 }
 
 TEST_F(NuggetCoreTest, SoftRebootTest) {
