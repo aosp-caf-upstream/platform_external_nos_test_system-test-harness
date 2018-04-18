@@ -225,7 +225,7 @@ TEST_F(ImportWrappedKeyTest, ImportSuccess) {
   request.mutable_wrapping_key_blob()->set_blob(&blob, sizeof(blob));
   request.set_masking_key(masking_key, sizeof(masking_key));
 
-  ASSERT_NO_ERROR(service->ImportWrappedKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportWrappedKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 
   EXPECT_EQ(sizeof(struct km_blob), response.blob().blob().size());

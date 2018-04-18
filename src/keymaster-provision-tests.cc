@@ -74,7 +74,7 @@ TEST_F(KeymasterProvisionTest, ProvisionDeviceIdsSuccess) {
   PopulateDefaultRequest(&request);
 
   Keymaster service(*client);
-  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response));
+  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response), "");
   ASSERT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 }
 
@@ -87,11 +87,11 @@ TEST_F(KeymasterProvisionTest, ReProvisionDeviceIdsSuccess) {
   Keymaster service(*client);
 
   // First instance.
-  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response));
+  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response), "");
   ASSERT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 
   // Second ...
-  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response));
+  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response), "");
   ASSERT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 }
 
@@ -107,7 +107,7 @@ TEST_F(KeymasterProvisionTest, ProductionModeProvisionFails) {
   avb_tools::SetProduction(client.get(), true, NULL, 0);
 
   // Provisioning is now disallowed.
-  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response));
+  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response), "");
   ASSERT_EQ((ErrorCode)response.error_code(),
             ErrorCode::PRODUCTION_MODE_PROVISIONING);
 }
@@ -124,7 +124,7 @@ TEST_F(KeymasterProvisionTest, InvalidDeviceIdFails) {
 
   Keymaster service(*client);
 
-  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response));
+  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response), "");
   ASSERT_EQ((ErrorCode)response.error_code(),
             ErrorCode::INVALID_DEVICE_IDS);
 }
@@ -141,7 +141,7 @@ TEST_F(KeymasterProvisionTest, MaxDeviceIdSuccess) {
 
   Keymaster service(*client);
 
-  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response));
+  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response), "");
   ASSERT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 }
 

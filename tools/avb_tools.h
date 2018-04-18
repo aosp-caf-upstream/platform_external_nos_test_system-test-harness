@@ -12,9 +12,12 @@
 #include <memory>
 #include <string>
 
-#define ASSERT_NO_ERROR(code) \
-  ASSERT_EQ(code, app_status::APP_SUCCESS) \
-      << code << " is " << nos::StatusCodeString(code)
+#define ASSERT_NO_ERROR(code, msg) \
+  do { \
+    int value = code; \
+    ASSERT_EQ(value, app_status::APP_SUCCESS) \
+        << value << " is " << nos::StatusCodeString(value) << msg; \
+  } while(0)
 
 using namespace nugget::app::avb;
 

@@ -3,6 +3,7 @@
 #include <random>
 
 #include "gtest/gtest.h"
+#include "avb_tools.h"
 #include "nugget_tools.h"
 #include "nugget/app/weaver/weaver.pb.h"
 #include "Weaver.client.h"
@@ -83,7 +84,7 @@ void WeaverTest::testWrite(const string& msg, uint32_t slot, const uint8_t *key,
   request.set_value(value, VALUE_SIZE);
 
   Weaver service(*client);
-  ASSERT_NO_ERROR(service.Write(request, &response)) << msg;
+  ASSERT_NO_ERROR(service.Write(request, &response), msg);
 }
 
 void WeaverTest::testRead(const string& msg, uint32_t slot, const uint8_t *key,
@@ -94,7 +95,7 @@ void WeaverTest::testRead(const string& msg, uint32_t slot, const uint8_t *key,
   request.set_key(key, KEY_SIZE);
 
   Weaver service(*client);
-  ASSERT_NO_ERROR(service.Read(request, &response)) << msg;
+  ASSERT_NO_ERROR(service.Read(request, &response), msg);
   ASSERT_EQ(response.error(), ReadResponse::NONE) << msg;
   ASSERT_EQ(response.throttle_msec(), 0u) << msg;
   auto response_value = response.value();
@@ -110,7 +111,7 @@ void WeaverTest::testEraseValue(const string& msg, uint32_t slot) {
   request.set_slot(slot);
 
   Weaver service(*client);
-  ASSERT_NO_ERROR(service.EraseValue(request, &response)) << msg;
+  ASSERT_NO_ERROR(service.EraseValue(request, &response), msg);
 }
 
 void WeaverTest::testReadWrongKey(const string& msg, uint32_t slot,
@@ -121,7 +122,7 @@ void WeaverTest::testReadWrongKey(const string& msg, uint32_t slot,
   request.set_key(key, KEY_SIZE);
 
   Weaver service(*client);
-  ASSERT_NO_ERROR(service.Read(request, &response)) << msg;
+  ASSERT_NO_ERROR(service.Read(request, &response), msg);
   ASSERT_EQ(response.error(), ReadResponse::WRONG_KEY) << msg;
   ASSERT_EQ(response.throttle_msec(), throttle_sec * 1000) << msg;
   auto response_value = response.value();
@@ -139,7 +140,7 @@ void WeaverTest::testReadThrottle(const string& msg, uint32_t slot,
   request.set_key(key, KEY_SIZE);
 
   Weaver service(*client);
-  ASSERT_NO_ERROR(service.Read(request, &response)) << msg;
+  ASSERT_NO_ERROR(service.Read(request, &response), msg);
   ASSERT_EQ(response.error(), ReadResponse::THROTTLE) << msg;
   ASSERT_NE(response.throttle_msec(), 0u) << msg;
   ASSERT_LE(response.throttle_msec(), throttle_sec * 1000) << msg;
@@ -169,7 +170,7 @@ TEST_F(WeaverTest, GetConfig) {
   GetConfigResponse response;
 
   Weaver service(*client);
-  ASSERT_NO_ERROR(service.GetConfig(request, &response));
+  ASSERT_NO_ERROR(service.GetConfig(request, &response), "");
   EXPECT_EQ(response.number_of_slots(), 64u);
   EXPECT_EQ(response.key_size(), 16u);
   EXPECT_EQ(response.value_size(), 16u);
@@ -309,6 +310,13 @@ TEST_F(WeaverTest, EraseValueInvalidSlot) {
 TEST_F(WeaverTest, WipeUserDataOnlyClearsValues) {
   testWrite(__STAMP__, WeaverTest::slot, TEST_KEY, TEST_VALUE);
   ASSERT_TRUE(nugget_tools::WipeUserData(client.get()));
+  testRead(__STAMP__, WeaverTest::slot, TEST_KEY, ZERO_VALUE);
+}
+
+TEST_F(WeaverTest, ProductionResetWipesUserData) {
+  avb_tools::SetProduction(client.get(), true, NULL, 0);
+  testWrite(__STAMP__, WeaverTest::slot, TEST_KEY, TEST_VALUE);
+  avb_tools::ResetProduction(client.get());
   testRead(__STAMP__, WeaverTest::slot, TEST_KEY, ZERO_VALUE);
 }
 
