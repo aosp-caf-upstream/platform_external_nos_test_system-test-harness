@@ -124,7 +124,7 @@ void AvbTest::SetUp(void)
   ResetProduction(client.get());
 
   code = Reset(client.get(), ResetRequest::LOCKS, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), &bootloader, &production, locks);
   EXPECT_EQ(bootloader, false);
@@ -154,7 +154,7 @@ void AvbTest::BootloaderDone(void)
   BootloaderDoneRequest request;
 
   Avb service(*client);
-  ASSERT_NO_ERROR(service.BootloaderDone(request, nullptr));
+  ASSERT_NO_ERROR(service.BootloaderDone(request, nullptr), "");
 }
 
 static const uint8_t kResetKeyPem[] =
@@ -366,18 +366,18 @@ TEST_F(AvbTest, CarrierLockTest)
   memset(carrier_data, 0, sizeof(carrier_data));
 
   code = SetCarrierLock(0x12, carrier_data, sizeof(carrier_data));
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), NULL, NULL, locks);
   ASSERT_EQ(locks[CARRIER], 0x12);
 
   code = SetCarrierLock(0, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // Set production mode
   SetBootloader();
   code = SetProduction(client.get(), true, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
   BootloaderDone();
 
   // Test we cannot set or unset the carrier lock in production mode
@@ -408,7 +408,7 @@ TEST_F(AvbTest, CarrierUnlockTest)
   request.set_allocated_token(token);
 
   Avb service(*client);
-  ASSERT_NO_ERROR(service.CarrierLockTest(request, &response));
+  ASSERT_NO_ERROR(service.CarrierLockTest(request, &response), "");
 
   // The nonce is covered by the signature, so changing it should trip the
   // signature verification
@@ -426,7 +426,7 @@ TEST_F(AvbTest, DeviceLockTest)
   // Test cannot set the lock
   SetBootloader();
   code = SetProduction(client.get(), true, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   code = SetDeviceLock(0x12);
   ASSERT_EQ(code, APP_ERROR_AVB_HLOS);
@@ -435,7 +435,7 @@ TEST_F(AvbTest, DeviceLockTest)
   ResetProduction(client.get());
 
   code = SetDeviceLock(0x34);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), &bootloader, &production, locks);
   ASSERT_TRUE(bootloader);
@@ -451,7 +451,7 @@ TEST_F(AvbTest, DeviceLockTest)
 
   // Test can unset
   code = SetDeviceLock(0x00);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), NULL, NULL, locks);
   ASSERT_EQ(locks[DEVICE], 0x00);
@@ -463,7 +463,7 @@ TEST_F(AvbTest, BootLockTest)
   int code;
   // Test production logic.
   code = SetProduction(client.get(), true, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // Test cannot set lock
   code = SetBootLock(0x12);
@@ -475,13 +475,13 @@ TEST_F(AvbTest, BootLockTest)
   // Show the bootloader setting and unsetting.
   SetBootloader();
   code = SetBootLock(0x12);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), NULL, NULL, locks);
   ASSERT_EQ(locks[BOOT], 0x12);
 
   code = SetBootLock(0x0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), NULL, NULL, locks);
   ASSERT_EQ(locks[BOOT], 0x00);
@@ -489,17 +489,17 @@ TEST_F(AvbTest, BootLockTest)
   // Test cannot unset lock while carrier set
   ResetProduction(client.get());
   code = Reset(client.get(), ResetRequest::LOCKS, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   code = SetCarrierLock(0x34, DEVICE_DATA, sizeof(DEVICE_DATA));
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   code = SetProduction(client.get(), true, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // Can lock when carrier lock is set.
   code = SetBootLock(0x56);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // Cannot unlock.
   code = SetBootLock(0x0);
@@ -516,9 +516,9 @@ TEST_F(AvbTest, BootLockTest)
   // Clear the locks to show device lock enforcement.
   ResetProduction(client.get());
   code = Reset(client.get(), ResetRequest::LOCKS, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
   code = SetProduction(client.get(), true, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // Need to be in the HLOS.
   code = SetDeviceLock(0x78);
@@ -526,13 +526,13 @@ TEST_F(AvbTest, BootLockTest)
 
   BootloaderDone();
   code = SetDeviceLock(0x78);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // We can move to a locked state when
   // device lock is true.
   SetBootloader();
   code = SetBootLock(0x9A);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // But we can't move back.
   code = SetBootLock(0x0);
@@ -556,21 +556,9 @@ TEST_F(AvbTest, OwnerLockTest)
     owner_key[i + 1] = (i >> 8) & 0xFF;
   }
 
-  // This should fail when boot lock is not set
-  code = SetOwnerLock(0x21, owner_key, sizeof(owner_key));
-  ASSERT_EQ(code, APP_ERROR_AVB_DENIED);
-
-  // Set the boot lock
-  SetBootloader();
-  code = SetBootLock(0x43);
-  ASSERT_NO_ERROR(code);
-
-  GetState(client.get(), NULL, NULL, locks);
-  ASSERT_EQ(locks[BOOT], 0x43);
-
-  // Try the owner lock again
+  // This should pass when BOOT lock is not set
   code = SetOwnerLock(0x65, owner_key, sizeof(owner_key));
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), NULL, NULL, locks);
   ASSERT_EQ(locks[OWNER], 0x65);
@@ -580,7 +568,7 @@ TEST_F(AvbTest, OwnerLockTest)
     size_t j;
 
     code = GetOwnerKey(i, chunk, &size);
-    ASSERT_NO_ERROR(code);
+    ASSERT_NO_ERROR(code, "");
     ASSERT_EQ(size, sizeof(chunk));
     for (j = 0; j < size; j++) {
       ASSERT_EQ(chunk[j], owner_key[i + j]);
@@ -596,10 +584,22 @@ TEST_F(AvbTest, OwnerLockTest)
 
   // Clear it
   code = SetOwnerLock(0x00, owner_key, sizeof(owner_key));
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), NULL, NULL, locks);
   ASSERT_EQ(locks[OWNER], 0x00);
+
+  // Set the boot lock
+  SetBootloader();
+  code = SetBootLock(0x43);
+  ASSERT_NO_ERROR(code, "");
+
+  GetState(client.get(), NULL, NULL, locks);
+  ASSERT_EQ(locks[BOOT], 0x43);
+
+  // Test setting the lock while BOOT is locked fails
+  code = SetOwnerLock(0x21, owner_key, sizeof(owner_key));
+  ASSERT_EQ(code, APP_ERROR_AVB_DENIED);
 }
 
 TEST_F(AvbTest, ProductionMode)
@@ -614,26 +614,26 @@ TEST_F(AvbTest, ProductionMode)
 
   // Set some lock values to make sure production doesn't affect them
   SetBootloader();
-  code = SetBootLock(0x11);
-  ASSERT_NO_ERROR(code);
+  code = SetOwnerLock(0x11, NULL, 0);
+  ASSERT_NO_ERROR(code, "");
 
-  code = SetOwnerLock(0x22, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  code = SetBootLock(0x22);
+  ASSERT_NO_ERROR(code, "");
 
   code = SetCarrierLock(0x33, DEVICE_DATA, sizeof(DEVICE_DATA));
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   code = SetDeviceLock(0x44);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // Set production mode with a DUT hash
   code = SetProduction(client.get(), true, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), NULL, &production, locks);
   ASSERT_TRUE(production);
-  ASSERT_EQ(locks[BOOT], 0x11);
-  ASSERT_EQ(locks[OWNER], 0x22);
+  ASSERT_EQ(locks[OWNER], 0x11);
+  ASSERT_EQ(locks[BOOT], 0x22);
   ASSERT_EQ(locks[CARRIER], 0x33);
   ASSERT_EQ(locks[DEVICE], 0x44);
 
@@ -652,13 +652,13 @@ TEST_F(AvbTest, Rollback)
 
   // Test we cannot change values in normal mode
   code = SetProduction(client.get(), true, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
   for (i = 0; i < 8; i++) {
     code = Store(i, 0xFF00000011223344 + i);
     ASSERT_EQ(code, APP_ERROR_AVB_BOOTLOADER);
 
     code = Load(i, &value);
-    ASSERT_NO_ERROR(code);
+    ASSERT_NO_ERROR(code, "");
     ASSERT_EQ(value, 0x00ULL);
   }
 
@@ -666,17 +666,17 @@ TEST_F(AvbTest, Rollback)
   SetBootloader();
   for (i = 0; i < 8; i++) {
     code = Store(i, 0xFF00000011223344 + i);
-    ASSERT_NO_ERROR(code);
+    ASSERT_NO_ERROR(code, "");
 
     code = Load(i, &value);
-    ASSERT_NO_ERROR(code);
+    ASSERT_NO_ERROR(code, "");
     ASSERT_EQ(value, 0xFF00000011223344 + i);
 
     code = Store(i, 0x8800000011223344 - i);
-    ASSERT_NO_ERROR(code);
+    ASSERT_NO_ERROR(code, "");
 
     code = Load(i, &value);
-    ASSERT_NO_ERROR(code);
+    ASSERT_NO_ERROR(code, "");
     ASSERT_EQ(value, 0x8800000011223344 - i);
   }
 }
@@ -691,13 +691,13 @@ TEST_F(AvbTest, Reset)
   // Set some locks and production mode*/
   SetBootloader();
   code = SetBootLock(0x12);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   code = SetDeviceLock(0x34);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   code = SetProduction(client.get(), true, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   BootloaderDone();
 
@@ -720,7 +720,7 @@ TEST_F(AvbTest, Reset)
   // Disable production, try reset, should pass
   ResetProduction(client.get());
   code = Reset(client.get(), ResetRequest::LOCKS, NULL, 0);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   GetState(client.get(), &bootloader, &production, locks);
   ASSERT_FALSE(bootloader);
@@ -742,7 +742,7 @@ TEST_F(AvbTest, GetResetChallengeTest)
   memset(empty, 0, sizeof(empty));
   code = GetResetChallenge(client.get(), &selector, &nonce, data, &len);
   ASSERT_LE(sizeof(data), len);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
   EXPECT_NE(0ULL, nonce);
   EXPECT_EQ((uint32_t)ResetToken::CURRENT, selector);
   EXPECT_EQ(32UL, len);
@@ -773,7 +773,7 @@ TEST_F(AvbTest, ResetProductionValid)
 
   memset(message.data, 0, sizeof(message.data));
   code = GetResetChallenge(client.get(), &selector, &message.nonce, message.data, &len);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
   // Expect, not assert, just in case something goes weird, we may still
   // exit cleanly.
   EXPECT_EQ(0, memcmp(message.data, kDeviceHash, sizeof(kDeviceHash)));
@@ -796,10 +796,10 @@ TEST_F(AvbTest, ResetProductionValid)
 
   // Now get the nonce and use a good signature.
   code = GetResetChallenge(client.get(), &selector, &message.nonce, message.data, &len);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
   ASSERT_EQ(0, SignChallenge(&message, signature, &siglen));
   code = Reset(client.get(), ResetRequest::PRODUCTION, signature, siglen);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 }
 
 static const uint8_t kNullSig[] = {
@@ -859,22 +859,31 @@ TEST_F(AvbTest, ProductionResetTestValid)
   // Now use a good signature.
   code = ProductionResetTest(selector, message.nonce, message.data, len,
                              signature, siglen);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // Note, testing nonce expiration is handled in the Reset(PRODUCTION)
   // test. This just checks a second signature over an app sourced nonce.
   code = GetResetChallenge(client.get(), &selector, &message.nonce, message.data, &len);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
   ASSERT_EQ(0, SignChallenge(&message, signature, &siglen));
   code = Reset(client.get(), ResetRequest::PRODUCTION, signature, siglen);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
 
   // Now test a null signature as we will for the real keys
   message.nonce = 0;
   memset(message.data, 0, sizeof(message.data));
   code = ProductionResetTest(selector, message.nonce, message.data, len,
                              kNullSig, kNullSigLen);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
+}
+
+TEST_F(AvbTest, WipeUserDataDoesNotLockDeviceLock) {
+  ASSERT_NO_ERROR(SetDeviceLock(0x00), "");
+  ASSERT_TRUE(nugget_tools::WipeUserData(client.get()));
+
+  uint8_t locks[4];
+  GetState(client.get(), nullptr, nullptr, locks);
+  EXPECT_EQ(locks[DEVICE], 0x00);
 }
 
 }  // namespace
