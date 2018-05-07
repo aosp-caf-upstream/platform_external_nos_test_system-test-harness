@@ -58,7 +58,11 @@ string find_uart(int verbosity){
   }
 
   if (verbosity >= TestHarness::VerbosityLevels::INFO) {
-    std::cout << "USING: " << return_value << std::endl;
+    if (return_value.empty()) {
+      std::cout << "UltraDebug UART not found" << std::endl;
+    } else {
+      std::cout << "USING: " << return_value << std::endl;
+    }
   }
 
   closedir(dir);
@@ -377,7 +381,7 @@ void TestHarness::Init(const char* path) {
   tty_fd = open(path, O_RDWR | O_NOCTTY | O_NDELAY);
   if (errno != 0) {
     perror("ERROR open()");
-    FatalError("");
+    FatalError("Cannot open debug UART to Citadel chip. Is UltraDebug board connected?");
   }
   errno = 0;
 

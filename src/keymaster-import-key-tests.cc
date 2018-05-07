@@ -13,8 +13,11 @@
 #include "openssl/ec_key.h"
 #include "openssl/nid.h"
 
+#include <sstream>
+
 using std::cout;
 using std::string;
+using std::stringstream;
 using std::unique_ptr;
 
 using namespace nugget::app::keymaster;
@@ -106,7 +109,7 @@ TEST_F(ImportKeyTest, AlgorithmMissingFails) {
   param->set_tag(Tag::RSA_PUBLIC_EXPONENT);
   param->set_long_integer(3);
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
 
@@ -118,7 +121,7 @@ TEST_F(ImportKeyTest, RSAInvalidKeySizeFails) {
 
   initRSARequest(&request, Algorithm::RSA, 256, 3);
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::UNSUPPORTED_KEY_SIZE);
 }
 
@@ -130,7 +133,7 @@ TEST_F(ImportKeyTest, RSAInvalidPublicExponentFails) {
   initRSARequest(&request, Algorithm::RSA, 512, 2, 2,
                  string(64, '\0'), string(64, '\0'));
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(),
             ErrorCode::UNSUPPORTED_KEY_SIZE);
 }
@@ -142,7 +145,7 @@ TEST_F(ImportKeyTest, RSAKeySizeTagMisatchNFails) {
   // N does not match KEY_SIZE.
   initRSARequest(&request, Algorithm::RSA, 512, 3, 3,
                  string(64, '\0'), string(63, '\0'));
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(),
             ErrorCode::IMPORT_PARAMETER_MISMATCH);
 }
@@ -154,7 +157,7 @@ TEST_F(ImportKeyTest, RSAKeySizeTagMisatchDFails) {
   // D does not match KEY_SIZE.
   initRSARequest(&request, Algorithm::RSA, 512, 3, 3,
                  string(63, '\0'), string(64, '\0'));
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(),
             ErrorCode::IMPORT_PARAMETER_MISMATCH);
 }
@@ -166,7 +169,7 @@ TEST_F(ImportKeyTest, RSAPublicExponentTagMisatchFails) {
   // e does not match PUBLIC_EXPONENT tag.
   initRSARequest(&request, Algorithm::RSA, 512, 3, 2,
                  string(64, '\0'), string(64, '\0'));
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(),
             ErrorCode::IMPORT_PARAMETER_MISMATCH);
 }
@@ -180,7 +183,7 @@ TEST_F(ImportKeyTest, RSA1024BadEFails) {
   const string N((const char *)RSA_1024_N, sizeof(RSA_1024_N));
   initRSARequest(&request, Algorithm::RSA, 1024, 3, 3, d, N);
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
 
@@ -193,7 +196,7 @@ TEST_F(ImportKeyTest, RSA1024BadDFails) {
   const string N((const char *)RSA_1024_N, sizeof(RSA_1024_N));
   initRSARequest(&request, Algorithm::RSA, 1024, 65537, 65537, d, N);
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
 
@@ -206,7 +209,7 @@ TEST_F(ImportKeyTest, RSA1024BadNFails) {
                  string((const char *)RSA_1024_N, sizeof(RSA_1024_N) - 1));
   initRSARequest(&request, Algorithm::RSA, 1024, 65537, 65537, d, N);
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
 
@@ -225,8 +228,9 @@ TEST_F(ImportKeyTest, RSASuccess) {
     request.mutable_rsa()->set_d(TEST_RSA_KEYS[i].d, TEST_RSA_KEYS[i].size);
     request.mutable_rsa()->set_n(TEST_RSA_KEYS[i].n, TEST_RSA_KEYS[i].size);
 
-    ASSERT_NO_ERROR(service->ImportKey(request, &response))
-        << "Failed at TEST_RSA_KEYS[" << i << "]";
+    stringstream ss;
+    ss << "Failed at TEST_RSA_KEYS[" << i << "]";
+    ASSERT_NO_ERROR(service->ImportKey(request, &response), ss.str());
     EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::OK)
         << "Failed at TEST_RSA_KEYS[" << i << "]";
 
@@ -249,7 +253,7 @@ TEST_F(ImportKeyTest, RSA1024OptionalParamsAbsentSuccess) {
                  string((const char *)RSA_1024_D, sizeof(RSA_1024_D)),
                  string((const char *)RSA_1024_N, sizeof(RSA_1024_N)));
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 
   EXPECT_EQ(sizeof(struct km_blob), response.blob().blob().size());
@@ -272,7 +276,7 @@ TEST_F(ImportKeyTest, ECMissingCurveIdTagFails) {
   param->set_tag(Tag::ALGORITHM);
   param->set_integer((uint32_t)Algorithm::EC);
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
 
@@ -291,7 +295,7 @@ TEST_F(ImportKeyTest, ECMisMatchedCurveIdTagFails) {
 
   request.mutable_ec()->set_curve_id((uint32_t)EcCurve::P_256);
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
 
@@ -314,7 +318,7 @@ TEST_F(ImportKeyTest, ECMisMatchedKeySizeTagCurveTagFails) {
 
   request.mutable_ec()->set_curve_id((uint32_t)EcCurve::P_224);
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
 
@@ -338,7 +342,7 @@ TEST_F(ImportKeyTest, ECMisMatchedP256KeySizeFails) {
   request.mutable_ec()->set_x(string((224 >> 3), '\0'));
   request.mutable_ec()->set_y(string((224 >> 3), '\0'));
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
 
@@ -361,7 +365,7 @@ TEST_F(ImportKeyTest, ECP256BadKeyFails) {
   request.mutable_ec()->set_x(string((224 >> 3), '\0'));
   request.mutable_ec()->set_y(string((224 >> 3), '\0'));
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
 
@@ -409,7 +413,7 @@ TEST_F (ImportKeyTest, ImportECP256KeySuccess) {
   request.mutable_ec()->set_x(xstr.get(), field_size);
   request.mutable_ec()->set_y(ystr.get(), field_size);
 
-  ASSERT_NO_ERROR(service->ImportKey(request, &response));
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 }
 

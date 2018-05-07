@@ -47,14 +47,14 @@ void NuggetCoreTest::TearDownTestCase() {
 TEST_F(NuggetCoreTest, GetVersionStringTest) {
   input_buffer.resize(0);
   ASSERT_NO_ERROR(NuggetCoreTest::client->CallApp(
-      APP_ID_NUGGET, NUGGET_PARAM_VERSION, input_buffer, &output_buffer));
+      APP_ID_NUGGET, NUGGET_PARAM_VERSION, input_buffer, &output_buffer), "");
   ASSERT_GT(output_buffer.size(), 0u);
 }
 
 TEST_F(NuggetCoreTest, GetDeviceIdTest) {
   input_buffer.resize(0);
   ASSERT_NO_ERROR(NuggetCoreTest::client->CallApp(
-      APP_ID_NUGGET, NUGGET_PARAM_DEVICE_ID, input_buffer, &output_buffer));
+      APP_ID_NUGGET, NUGGET_PARAM_DEVICE_ID, input_buffer, &output_buffer), "");
   ASSERT_EQ(output_buffer.size(), 18u);
   for (size_t i = 0; i < output_buffer.size(); i++) {
     if (i == 8) {
@@ -86,7 +86,7 @@ TEST_F(NuggetCoreTest, GetLowPowerStats) {
   buffer.reserve(1000);                         // Much more than needed
   ASSERT_NO_ERROR(NuggetCoreTest::client->CallApp(
       APP_ID_NUGGET, NUGGET_PARAM_GET_LOW_POWER_STATS,
-      buffer, &buffer));
+      buffer, &buffer), "");
   ASSERT_GE(buffer.size(), sizeof(stats));
 
   memcpy(&stats, buffer.data(), sizeof(stats));

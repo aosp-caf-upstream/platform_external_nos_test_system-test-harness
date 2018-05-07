@@ -23,7 +23,8 @@ using std::stringstream;
 using std::unique_ptr;
 
 #define ASSERT_MSG_TYPE(msg, type_) \
-do{if(type_ != APImessageID::NOTICE && msg.type == APImessageID::NOTICE){ \
+do{ \
+  if (type_ != APImessageID::NOTICE && msg.type == APImessageID::NOTICE) { \
   Notice received; \
   received.ParseFromArray(reinterpret_cast<char *>(msg.data), msg.data_len); \
   ASSERT_EQ(msg.type, type_) \
@@ -35,9 +36,11 @@ do{if(type_ != APImessageID::NOTICE && msg.type == APImessageID::NOTICE){ \
 }}while(0)
 
 #define ASSERT_SUBTYPE(msg, type_) \
+do { \
   EXPECT_GT(msg.data_len, 2); \
   uint16_t subtype = (msg.data[0] << 8) | msg.data[1]; \
-  EXPECT_EQ(subtype, type_)
+  EXPECT_EQ(subtype, type_); \
+} while(0)
 
 namespace {
 
@@ -85,10 +88,10 @@ TEST_F(DcryptoTest, AesCmacRfc4493Test) {
     ASSERT_NO_ERROR(harness->SendOneofProto(
         APImessageID::TESTING_API_CALL,
         OneofTestParametersCase::kAesCmacTest,
-        request));
+        request), "");
 
     test_harness::raw_message msg;
-    ASSERT_NO_ERROR(harness->GetData(&msg, 4096 * BYTE_TIME));
+    ASSERT_NO_ERROR(harness->GetData(&msg, 4096 * BYTE_TIME), "");
     ASSERT_MSG_TYPE(msg, APImessageID::TESTING_API_RESPONSE);
     ASSERT_SUBTYPE(msg, OneofTestResultsCase::kAesCmacTestResult);
 

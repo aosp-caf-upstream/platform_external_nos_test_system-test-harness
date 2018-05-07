@@ -29,10 +29,11 @@ struct blob_enforcements {
 	struct blob_params params[20];
 } __attribute__((packed));
 
+/* TODO: refactor RSA_MAX_BYTES from dcrypto.h */
 struct blob_rsa {
 	struct	LITE_RSA rsa;
-	uint8_t N_bytes[4096 >> 3];
-	uint8_t d_bytes[4096 >> 3];
+	uint8_t N_bytes[3072 >> 3];
+	uint8_t d_bytes[3072 >> 3];
 } __attribute__((packed));
 
 struct blob_ec {

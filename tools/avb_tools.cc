@@ -30,7 +30,7 @@ void GetState(nos::NuggetClientInterface *client, bool *bootloader,
   GetStateResponse response;
 
   Avb service(*client);
-  ASSERT_NO_ERROR(service.GetState(request, &response));
+  ASSERT_NO_ERROR(service.GetState(request, &response), "");
   EXPECT_EQ(response.number_of_locks(), 4U);
 
   if (bootloader != NULL)
@@ -111,11 +111,12 @@ void ResetProduction(nos::NuggetClientInterface *client)
   size_t len = sizeof(message.data);
   uint8_t signature[AVB_SIGNATURE_SIZE];
   size_t siglen = sizeof(signature);
+  memset(signature, 0, siglen);
 
   // We need the nonce to be set before we get fallthrough.
   memset(message.data, 0, sizeof(message.data));
   code = GetResetChallenge(client, &selector, &message.nonce, message.data, &len);
-  ASSERT_NO_ERROR(code);
+  ASSERT_NO_ERROR(code, "");
   // No signature is needed for TEST_IMAGE.
   //EXPECT_EQ(0, SignChallenge(&message, signature, &siglen));
   Reset(client, ResetRequest::PRODUCTION, signature, siglen);
