@@ -8,59 +8,22 @@
 #ifdef ANDROID
 #define FLAGS_list_slow_tests false
 #define FLAGS_disable_slow_tests false
-// TODO: how does FLAGS_release_tests feature here?
-#define FLAGS_release_tests true
 #else
 #include <gflags/gflags.h>
+
 DEFINE_bool(list_slow_tests, false, "List tests included in the set of slow tests.");
 DEFINE_bool(disable_slow_tests, false, "Enables a filter to disable a set of slow tests.");
-DEFINE_bool(release_tests, false, "Disables tests that would fail for firmware images built with TEST_IMAGE=0");
 #endif  // ANDROID
-
-static void generate_disabled_test_list(
-    const std::vector<std::string>& tests,
-    std::stringstream *ss) {
-    for (const auto& test : tests) {
-      if (ss->tellp() == 0) {
-        *ss << "-";
-      } else {
-        *ss << ":";
-      }
-      *ss << test;
-    }
-}
 
 int main(int argc, char** argv) {
   const std::vector<std::string> slow_tests{
       "AvbTest.*",
       "ImportKeyTest.RSASuccess",
-      "NuggetCoreTest.EnterDeepSleep",
       "NuggetCoreTest.HardRebootTest",
-      "WeaverTest.ReadAttemptCounterPersistsDeepSleep",
-      "WeaverTest.ReadAttemptCounterPersistsHardReboot",
-      "WeaverTest.ReadThrottleAfterDeepSleep",
+      "WeaverTest.WriteHardRebootRead",
       "WeaverTest.ReadThrottleAfterHardReboot",
       "WeaverTest.ReadThrottleAfterSleep",
-      "WeaverTest.WriteDeepSleepRead",
-      "WeaverTest.WriteHardRebootRead",
-  };
-
-  const std::vector<std::string> disabled_for_release_tests{
-      "DcryptoTest.AesCmacRfc4493Test",
-      "KeymasterProvisionTest.ProvisionDeviceIdsSuccess",
-      "KeymasterProvisionTest.ReProvisionDeviceIdsSuccess",
-      "KeymasterProvisionTest.ProductionModeProvisionFails",
-      "KeymasterProvisionTest.InvalidDeviceIdFails",
-      "KeymasterProvisionTest.MaxDeviceIdSuccess",
-      "KeymasterProvisionTest.NoMeidSuccess",
-      "NuggetOsTest.NoticePing",
-      "NuggetOsTest.InvalidMessageType",
-      "NuggetOsTest.Sequence",
-      "NuggetOsTest.Echo",
-      "NuggetOsTest.AesCbc",
-      "NuggetOsTest.Trng",
-      "WeaverTest.ProductionResetWipesUserData",
-      "AvbTest.*",
+      "WeaverTest.ReadAttemptCounterPersistsHardReboot",
   };
 
   testing::InitGoogleMock(&argc, argv);
@@ -77,15 +40,18 @@ int main(int argc, char** argv) {
     exit(0);
   }
 
-  std::stringstream ss;
   if (FLAGS_disable_slow_tests) {
-    generate_disabled_test_list(slow_tests, &ss);
-  }
-  if (FLAGS_release_tests) {
-    generate_disabled_test_list(disabled_for_release_tests, &ss);
-  }
-
-  if (FLAGS_disable_slow_tests || FLAGS_release_tests) {
+    std::stringstream ss;
+    bool first = true;
+    for (const auto& test : slow_tests) {
+      if (first) {
+        first = false;
+        ss << "-";
+      } else {
+        ss << ":";
+      }
+      ss << test;
+    }
     ::testing::GTEST_FLAG(filter) = ss.str();
   }
 

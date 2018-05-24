@@ -219,15 +219,15 @@ TEST_F(WeaverTest, WriteToMultipleSlotsInDifferentRecordsDecreasingOrder) {
   testRead(__STAMP__, 5, TEST_KEY, TEST_VALUE);
 }
 
-TEST_F(WeaverTest, WriteDeepSleepRead) {
+TEST_F(WeaverTest, WriteSoftRebootRead) {
   testWrite(__STAMP__, WeaverTest::slot, TEST_KEY, TEST_VALUE);
-  ASSERT_TRUE(nugget_tools::WaitForSleep(client.get(), 0));
+  ASSERT_TRUE(nugget_tools::RebootNugget(client.get(), NUGGET_REBOOT_SOFT));
   testRead(__STAMP__, WeaverTest::slot, TEST_KEY, TEST_VALUE);
 }
 
 TEST_F(WeaverTest, WriteHardRebootRead) {
   testWrite(__STAMP__, WeaverTest::slot, TEST_KEY, TEST_VALUE);
-  ASSERT_TRUE(nugget_tools::RebootNugget(client.get()));
+  ASSERT_TRUE(nugget_tools::RebootNugget(client.get(), NUGGET_REBOOT_HARD));
   testRead(__STAMP__, WeaverTest::slot, TEST_KEY, TEST_VALUE);
 }
 
@@ -236,33 +236,32 @@ TEST_F(WeaverTest, ReadThrottle) {
   testReadThrottle(__STAMP__, WeaverTest::slot, WRONG_KEY, 30);
 }
 
-TEST_F(WeaverTest, ReadThrottleAfterDeepSleep) {
+TEST_F(WeaverTest, ReadThrottleAfterSoftReboot) {
   activateThrottle(WeaverTest::slot, TEST_KEY, WRONG_KEY, 30);
-  ASSERT_TRUE(nugget_tools::WaitForSleep(client.get(), 0));
+  ASSERT_TRUE(nugget_tools::RebootNugget(client.get(), NUGGET_REBOOT_SOFT));
   testReadThrottle(__STAMP__, WeaverTest::slot, WRONG_KEY, 30);
 }
 
 TEST_F(WeaverTest, ReadThrottleAfterHardReboot) {
   activateThrottle(WeaverTest::slot, TEST_KEY, WRONG_KEY, 30);
-  ASSERT_TRUE(nugget_tools::RebootNugget(client.get()));
+  ASSERT_TRUE(nugget_tools::RebootNugget(client.get(), NUGGET_REBOOT_HARD));
   testReadThrottle(__STAMP__, WeaverTest::slot, WRONG_KEY, 30);
 }
 
 TEST_F(WeaverTest, ReadThrottleAfterSleep) {
-  uint32_t waited = 0;
   activateThrottle(WeaverTest::slot, TEST_KEY, WRONG_KEY, 30);
-  ASSERT_TRUE(nugget_tools::WaitForSleep(client.get(), &waited));
+  const uint32_t waited = nugget_tools::WaitForSleep();
   testReadThrottle(__STAMP__, WeaverTest::slot, WRONG_KEY, 30 - waited);
 }
 
-TEST_F(WeaverTest, ReadAttemptCounterPersistsDeepSleep) {
+TEST_F(WeaverTest, ReadAttemptCounterPersistsSoftReboot) {
   testWrite(__STAMP__, WeaverTest::slot, TEST_KEY, TEST_VALUE);
 
   testReadWrongKey(__STAMP__, WeaverTest::slot, WRONG_KEY, 0);
   testReadWrongKey(__STAMP__, WeaverTest::slot, WRONG_KEY, 0);
   testReadWrongKey(__STAMP__, WeaverTest::slot, WRONG_KEY, 0);
 
-  ASSERT_TRUE(nugget_tools::WaitForSleep(client.get(), 0));
+  ASSERT_TRUE(nugget_tools::RebootNugget(client.get(), NUGGET_REBOOT_SOFT));
 
   testReadWrongKey(__STAMP__, WeaverTest::slot, WRONG_KEY, 0);
   testReadWrongKey(__STAMP__, WeaverTest::slot, WRONG_KEY, 30);
@@ -274,7 +273,7 @@ TEST_F(WeaverTest, ReadAttemptCounterPersistsHardReboot) {
   testReadWrongKey(__STAMP__, WeaverTest::slot, WRONG_KEY, 0);
   testReadWrongKey(__STAMP__, WeaverTest::slot, WRONG_KEY, 0);
 
-  ASSERT_TRUE(nugget_tools::RebootNugget(client.get()));
+  ASSERT_TRUE(nugget_tools::RebootNugget(client.get(), NUGGET_REBOOT_HARD));
 
   testReadWrongKey(__STAMP__, WeaverTest::slot, WRONG_KEY, 0);
   testReadWrongKey(__STAMP__, WeaverTest::slot, WRONG_KEY, 0);

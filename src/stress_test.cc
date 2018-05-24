@@ -25,7 +25,7 @@ unique_ptr<TestHarness> harness = unique_ptr<TestHarness>(new TestHarness());
 
 void cleanup() {
   std::cout << "Performing Reboot!\n";
-  harness->RebootNugget();
+  harness->RebootNugget(NUGGET_REBOOT_HARD);
   std::cout << "Done!\n";
 }
 

@@ -44,8 +44,9 @@ struct blob_ec {
 } __attribute__((packed));
 
 struct blob_sym {
+	/* TODO: max HMAC key size? */
 	uint32_t key_bits;
-	uint8_t bytes[512 >> 3];
+	uint8_t bytes[2048 >> 3];
 } __attribute__((packed));
 
 enum blob_alg {
@@ -61,12 +62,12 @@ enum blob_alg {
 
 struct km_blob {
 	struct {
+		uint32_t id;
+		/* TODO: salt etc. */
+	} header __attribute__((packed));
+	struct {
 		uint32_t magic;
 		uint32_t version;
-		uint32_t id;
-		uint32_t iv[4];
-	} h __attribute__((packed));
-	struct {
 		/* TODO: is sw_enforced expected to be managed by h/w? */
 		struct blob_enforcements sw_enforced;
 		struct blob_enforcements tee_enforced;
