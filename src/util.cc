@@ -122,8 +122,8 @@ void TestHarness::flushConsole() {
 #endif  // CONFIG_NO_UART
 }
 
-bool TestHarness::RebootNugget(uint8_t type) {
-  return nugget_tools::RebootNugget(client.get(), type);
+bool TestHarness::RebootNugget() {
+  return nugget_tools::RebootNugget(client.get());
 }
 
 void print_bin(std::ostream &out, uint8_t c) {

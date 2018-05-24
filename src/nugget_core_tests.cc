@@ -67,12 +67,12 @@ TEST_F(NuggetCoreTest, GetDeviceIdTest) {
   }
 }
 
-TEST_F(NuggetCoreTest, SoftRebootTest) {
-  ASSERT_TRUE(nugget_tools::RebootNugget(client.get(), NUGGET_REBOOT_SOFT));
+TEST_F(NuggetCoreTest, EnterDeepSleep) {
+  ASSERT_TRUE(nugget_tools::WaitForSleep(client.get(), nullptr));
 }
 
 TEST_F(NuggetCoreTest, HardRebootTest) {
-  ASSERT_TRUE(nugget_tools::RebootNugget(client.get(), NUGGET_REBOOT_HARD));
+  ASSERT_TRUE(nugget_tools::RebootNugget(client.get()));
 }
 
 TEST_F(NuggetCoreTest, WipeUserData) {

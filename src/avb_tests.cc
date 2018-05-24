@@ -433,6 +433,7 @@ TEST_F(AvbTest, DeviceLockTest)
 
   // Test can set lock
   ResetProduction(client.get());
+  SetBootloader();
 
   code = SetDeviceLock(0x34);
   ASSERT_NO_ERROR(code, "");
@@ -455,6 +456,11 @@ TEST_F(AvbTest, DeviceLockTest)
 
   GetState(client.get(), NULL, NULL, locks);
   ASSERT_EQ(locks[DEVICE], 0x00);
+}
+
+TEST_F(AvbTest, SetDeviceLockIsIdempotent) {
+  ASSERT_NO_ERROR(SetDeviceLock(0x65), "");
+  ASSERT_NO_ERROR(SetDeviceLock(0x65), "");
 }
 
 TEST_F(AvbTest, BootLockTest)
@@ -498,6 +504,7 @@ TEST_F(AvbTest, BootLockTest)
   ASSERT_NO_ERROR(code, "");
 
   // Can lock when carrier lock is set.
+  SetBootloader();
   code = SetBootLock(0x56);
   ASSERT_NO_ERROR(code, "");
 
@@ -519,6 +526,7 @@ TEST_F(AvbTest, BootLockTest)
   ASSERT_NO_ERROR(code, "");
   code = SetProduction(client.get(), true, NULL, 0);
   ASSERT_NO_ERROR(code, "");
+  SetBootloader();
 
   // Need to be in the HLOS.
   code = SetDeviceLock(0x78);
@@ -541,6 +549,11 @@ TEST_F(AvbTest, BootLockTest)
   GetState(client.get(), NULL, NULL, locks);
   ASSERT_EQ(locks[DEVICE], 0x78);
   ASSERT_EQ(locks[BOOT], 0x9A);
+}
+
+TEST_F(AvbTest, SetBootLockIsIdempotent) {
+  ASSERT_NO_ERROR(SetBootLock(0x12), "");
+  ASSERT_NO_ERROR(SetBootLock(0x12), "");
 }
 
 TEST_F(AvbTest, OwnerLockTest)

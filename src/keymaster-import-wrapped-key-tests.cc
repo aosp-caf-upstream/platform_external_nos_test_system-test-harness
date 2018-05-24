@@ -41,6 +41,13 @@ void ImportWrappedKeyTest::SetUpTestCase() {
   EXPECT_TRUE(client->IsOpen()) << "Unable to connect";
 
   service.reset(new Keymaster(*client));
+
+  SetRootOfTrustRequest request;
+  SetRootOfTrustResponse response;
+  request.set_digest(string(32, '\0'));
+
+  ASSERT_NO_ERROR(service->SetRootOfTrust(request, &response), "");
+  EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 }
 
 void ImportWrappedKeyTest::TearDownTestCase() {
