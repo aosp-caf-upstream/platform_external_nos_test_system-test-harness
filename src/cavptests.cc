@@ -109,10 +109,10 @@ TEST_F(NuggetOsTest, AesGcm) {
     ASSERT_NO_ERROR(harness->SendOneofProto(
         APImessageID::TESTING_API_CALL,
         OneofTestParametersCase::kAesGcmEncryptTest,
-        request), "");
+        request));
 
     test_harness::raw_message msg;
-    ASSERT_NO_ERROR(harness->GetData(&msg, 4096 * BYTE_TIME), "");
+    ASSERT_NO_ERROR(harness->GetData(&msg, 4096 * BYTE_TIME));
     ASSERT_MSG_TYPE(msg, APImessageID::TESTING_API_RESPONSE);
     ASSERT_SUBTYPE(msg, OneofTestResultsCase::kAesGcmEncryptTestResult);
 

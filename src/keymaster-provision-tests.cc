@@ -145,19 +145,4 @@ TEST_F(KeymasterProvisionTest, MaxDeviceIdSuccess) {
   ASSERT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 }
 
-// Regression test for b/77830050#comment6
-TEST_F(KeymasterProvisionTest, NoMeidSuccess) {
-
-  ProvisionDeviceIdsRequest request;
-  ProvisionDeviceIdsResponse response;
-
-  PopulateDefaultRequest(&request);
-  request.clear_meid();
-
-  Keymaster service(*client);
-
-  ASSERT_NO_ERROR(service.ProvisionDeviceIds(request, &response), "");
-  ASSERT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
-}
-
 }  // namespace
