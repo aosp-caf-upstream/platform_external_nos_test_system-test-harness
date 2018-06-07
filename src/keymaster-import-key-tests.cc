@@ -1,9 +1,12 @@
 #include "gtest/gtest.h"
+#include "avb_tools.h"
+#include "keymaster_tools.h"
 #include "nugget_tools.h"
 #include "nugget/app/keymaster/keymaster.pb.h"
 #include "nugget/app/keymaster/keymaster_defs.pb.h"
 #include "nugget/app/keymaster/keymaster_types.pb.h"
 #include "Keymaster.client.h"
+#include "util.h"
 
 #include "src/blob.h"
 #include "src/macros.h"
@@ -30,6 +33,7 @@ class ImportKeyTest: public testing::Test {
  protected:
   static unique_ptr<nos::NuggetClientInterface> client;
   static unique_ptr<Keymaster> service;
+  static unique_ptr<test_harness::TestHarness> uart_printer;
 
   static void SetUpTestCase();
   static void TearDownTestCase();
@@ -77,18 +81,26 @@ class ImportKeyTest: public testing::Test {
 
 unique_ptr<nos::NuggetClientInterface> ImportKeyTest::client;
 unique_ptr<Keymaster> ImportKeyTest::service;
+unique_ptr<test_harness::TestHarness> ImportKeyTest::uart_printer;
 
 void ImportKeyTest::SetUpTestCase() {
+  uart_printer = test_harness::TestHarness::MakeUnique();
+
   client = nugget_tools::MakeNuggetClient();
   client->Open();
   EXPECT_TRUE(client->IsOpen()) << "Unable to connect";
 
   service.reset(new Keymaster(*client));
+
+  // Do setup that is normally done by the bootloader.
+  keymaster_tools::SetRootOfTrust(client.get());
 }
 
 void ImportKeyTest::TearDownTestCase() {
   client->Close();
   client = unique_ptr<nos::NuggetClientInterface>();
+
+  uart_printer = nullptr;
 }
 
 // TODO: refactor into import key tests.
@@ -291,9 +303,9 @@ TEST_F(ImportKeyTest, ECMisMatchedCurveIdTagFails) {
 
   param = params->add_params();
   param->set_tag(Tag::EC_CURVE);
-  param->set_integer((uint32_t)EcCurve::P_224);
+  param->set_integer((uint32_t)EcCurve::P_256);
 
-  request.mutable_ec()->set_curve_id((uint32_t)EcCurve::P_256);
+  request.mutable_ec()->set_curve_id(((uint32_t)EcCurve::P_256) + 1);
 
   ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
@@ -310,19 +322,17 @@ TEST_F(ImportKeyTest, ECMisMatchedKeySizeTagCurveTagFails) {
 
   param = params->add_params();
   param->set_tag(Tag::EC_CURVE);
-  param->set_integer((uint32_t)EcCurve::P_224);
+  param->set_integer((uint32_t)EcCurve::P_256);
 
   param = params->add_params();
   param->set_tag(Tag::KEY_SIZE);
-  param->set_integer((uint32_t)256);  /* Should be 224 */
+  param->set_integer((uint32_t)384);  /* Should be 256 */
 
-  request.mutable_ec()->set_curve_id((uint32_t)EcCurve::P_224);
+  request.mutable_ec()->set_curve_id((uint32_t)EcCurve::P_256);
 
   ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
 }
-
-// TODO: tests for P224.
 
 TEST_F(ImportKeyTest, ECMisMatchedP256KeySizeFails) {
   ImportKeyRequest request;
@@ -338,9 +348,9 @@ TEST_F(ImportKeyTest, ECMisMatchedP256KeySizeFails) {
   param->set_integer((uint32_t)EcCurve::P_256);
 
   request.mutable_ec()->set_curve_id((uint32_t)EcCurve::P_256);
-  request.mutable_ec()->set_d(string((224 >> 3) - 1, '\0'));
-  request.mutable_ec()->set_x(string((224 >> 3), '\0'));
-  request.mutable_ec()->set_y(string((224 >> 3), '\0'));
+  request.mutable_ec()->set_d(string((256 >> 3) - 1, '\0'));
+  request.mutable_ec()->set_x(string((256 >> 3), '\0'));
+  request.mutable_ec()->set_y(string((256 >> 3), '\0'));
 
   ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
@@ -361,9 +371,9 @@ TEST_F(ImportKeyTest, ECP256BadKeyFails) {
   param->set_integer((uint32_t)EcCurve::P_256);
 
   request.mutable_ec()->set_curve_id((uint32_t)EcCurve::P_256);
-  request.mutable_ec()->set_d(string((224 >> 3), '\0'));
-  request.mutable_ec()->set_x(string((224 >> 3), '\0'));
-  request.mutable_ec()->set_y(string((224 >> 3), '\0'));
+  request.mutable_ec()->set_d(string((256 >> 3), '\0'));
+  request.mutable_ec()->set_x(string((256 >> 3), '\0'));
+  request.mutable_ec()->set_y(string((256 >> 3), '\0'));
 
   ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::INVALID_ARGUMENT);
@@ -416,9 +426,6 @@ TEST_F (ImportKeyTest, ImportECP256KeySuccess) {
   ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
   EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::OK);
 }
-
-// TODO: tests for P384, P521.
-
 
 // TODO: add tests for symmetric key import.
 

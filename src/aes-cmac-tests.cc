@@ -65,7 +65,6 @@ void DcryptoTest::SetUpTestCase() {
 }
 
 void DcryptoTest::TearDownTestCase() {
-  harness->ReadUntil(test_harness::BYTE_TIME * 1024);
   harness = unique_ptr<test_harness::TestHarness>();
 }
 
@@ -74,7 +73,6 @@ void DcryptoTest::TearDownTestCase() {
 TEST_F(DcryptoTest, AesCmacRfc4493Test) {
   const int verbosity = harness->getVerbosity();
   harness->setVerbosity(verbosity - 1);
-  harness->ReadUntil(test_harness::BYTE_TIME * 1024);
 
   for (size_t i = 0; i < ARRAYSIZE(RFC4493_AES_CMAC_DATA); i++) {
     const cmac_data *test_case = &RFC4493_AES_CMAC_DATA[i];
@@ -107,7 +105,6 @@ TEST_F(DcryptoTest, AesCmacRfc4493Test) {
     }
   }
 
-  harness->ReadUntil(test_harness::BYTE_TIME * 1024);
   harness->setVerbosity(verbosity);
 }
 

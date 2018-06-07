@@ -29,6 +29,8 @@ struct ResetMessage {
   uint8_t data[AVB_DEVICE_DATA_SIZE];
 };
 
+void SetBootloader(nos::NuggetClientInterface *client);
+void BootloaderDone(nos::NuggetClientInterface *client);
 void GetState(nos::NuggetClientInterface *client, bool *bootloader,
               bool *production, uint8_t *locks);
 int Reset(nos::NuggetClientInterface *client, ResetRequest_ResetKind kind,

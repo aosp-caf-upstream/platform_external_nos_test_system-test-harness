@@ -1,9 +1,12 @@
 #include "gtest/gtest.h"
+#include "avb_tools.h"
+#include "keymaster_tools.h"
 #include "nugget_tools.h"
 #include "nugget/app/keymaster/keymaster.pb.h"
 #include "nugget/app/keymaster/keymaster_defs.pb.h"
 #include "nugget/app/keymaster/keymaster_types.pb.h"
 #include "Keymaster.client.h"
+#include "util.h"
 
 #include "src/blob.h"
 #include "src/macros.h"
@@ -27,6 +30,7 @@ class ImportWrappedKeyTest: public testing::Test {
  protected:
   static unique_ptr<nos::NuggetClientInterface> client;
   static unique_ptr<Keymaster> service;
+  static unique_ptr<test_harness::TestHarness> uart_printer;
 
   static void SetUpTestCase();
   static void TearDownTestCase();
@@ -34,18 +38,26 @@ class ImportWrappedKeyTest: public testing::Test {
 
 unique_ptr<nos::NuggetClientInterface> ImportWrappedKeyTest::client;
 unique_ptr<Keymaster> ImportWrappedKeyTest::service;
+unique_ptr<test_harness::TestHarness> ImportWrappedKeyTest::uart_printer;
 
 void ImportWrappedKeyTest::SetUpTestCase() {
+  uart_printer = test_harness::TestHarness::MakeUnique();
+
   client = nugget_tools::MakeNuggetClient();
   client->Open();
   EXPECT_TRUE(client->IsOpen()) << "Unable to connect";
 
   service.reset(new Keymaster(*client));
+
+  // Do setup that is normally done by the bootloader.
+  keymaster_tools::SetRootOfTrust(client.get());
 }
 
 void ImportWrappedKeyTest::TearDownTestCase() {
   client->Close();
   client = unique_ptr<nos::NuggetClientInterface>();
+
+  uart_printer = nullptr;
 }
 
 /* Wrapped key DER just for reference; fields below have been pulled

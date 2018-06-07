@@ -21,10 +21,13 @@
 
 #ifdef ANDROID
 #define FLAGS_util_use_ahdlc false
+#define FLAGS_util_print_uart false
 #else
 #include "gflags/gflags.h"
 
 DEFINE_bool(util_use_ahdlc, false, "Use aHDLC over UART instead of SPI.");
+DEFINE_bool(util_print_uart, false, "Print the output of citadel UART.");
+DEFINE_string(util_verbosity, "ERROR", "One of SILENT, CRITICAL, ERROR, WARNING, or INFO.");
 #endif  // ANDROID
 
 using nugget::app::protoapi::APImessageID;
@@ -37,24 +40,55 @@ using std::chrono::high_resolution_clock;
 using std::chrono::microseconds;
 
 namespace test_harness {
+namespace {
 
-string find_uart(int verbosity){
+int GetVerbosityFromFlag() {
+#ifdef ANDROID
+  return TestHarness::ERROR;
+#else
+  std::string upper_case_flag;
+  upper_case_flag.reserve(FLAGS_util_verbosity.size());
+  std::transform(FLAGS_util_verbosity.begin(), FLAGS_util_verbosity.end(),
+                 std::back_inserter(upper_case_flag), toupper);
+
+  if (upper_case_flag == "SILENT")
+    return TestHarness::SILENT;
+  if (upper_case_flag == "CRITICAL")
+    return TestHarness::CRITICAL;
+  if (upper_case_flag == "WARNING")
+    return TestHarness::WARNING;
+  if (upper_case_flag == "INFO")
+    return TestHarness::INFO;
+
+  // Default to ERROR.
+  return TestHarness::ERROR;
+#endif  // ANDROID
+}
+
+#ifndef ANDROID
+string find_uart(int verbosity) {
   constexpr char dir_path[] = "/dev/";
   auto dir = opendir(dir_path);
   if (!dir) {
     return "";
   }
 
+  string manual_serial_no = nugget_tools::GetCitadelUSBSerialNo();
+  const char prefix[] = "ttyUltraTarget_";
+
   string return_value = "";
-  const char prefix[] = "ttyUltraTarget";
-  const size_t prefix_length = sizeof(prefix) / sizeof(prefix[0]) - 1;
-  while (auto listing = readdir(dir)) {
-    // The following is always true so it is not checked:
-    // sizeof(listing->d_name) >= sizeof(prefix)
-    if (std::equal(prefix, prefix + prefix_length, listing->d_name)) {
-      return_value = string(dir_path) + listing->d_name;
-      break;
+  if (manual_serial_no.empty()) {
+    const size_t prefix_length = sizeof(prefix) / sizeof(prefix[0]) - 1;
+    while (auto listing = readdir(dir)) {
+      // The following is always true so it is not checked:
+      // sizeof(listing->d_name) >= sizeof(prefix)
+      if (std::equal(prefix, prefix + prefix_length, listing->d_name)) {
+        return_value = string(dir_path) + listing->d_name;
+        break;
+      }
     }
+  } else {
+    return_value = string(dir_path) + prefix + manual_serial_no;
   }
 
   if (verbosity >= TestHarness::VerbosityLevels::INFO) {
@@ -68,8 +102,15 @@ string find_uart(int verbosity){
   closedir(dir);
   return return_value;
 }
+#endif  // ANDROID
 
-TestHarness::TestHarness() : verbosity(ERROR),
+}  // namespace
+
+std::unique_ptr<TestHarness> TestHarness::MakeUnique() {
+  return std::unique_ptr<TestHarness>(new TestHarness());
+}
+
+TestHarness::TestHarness() : verbosity(GetVerbosityFromFlag()),
                              output_buffer(PROTO_BUFFER_MAX_LEN, 0),
                              input_buffer(PROTO_BUFFER_MAX_LEN, 0), tty_fd(-1) {
 #ifdef CONFIG_NO_UART
@@ -91,8 +132,14 @@ TestHarness::~TestHarness() {
   if (verbosity >= INFO) {
     std::cout << "CLOSING TEST HARNESS" << std::endl;
   }
-  if (FLAGS_util_use_ahdlc) {
-    close(tty_fd);
+  if (ttyState()) {
+    auto temp = tty_fd;
+    tty_fd = -1;
+    close(temp);
+  }
+  if (print_uart_worker) {
+    print_uart_worker->join();
+    print_uart_worker = nullptr;
   }
 #endif  // CONFIG_NO_UART
 
@@ -122,8 +169,8 @@ void TestHarness::flushConsole() {
 #endif  // CONFIG_NO_UART
 }
 
-bool TestHarness::RebootNugget(uint8_t type) {
-  return nugget_tools::RebootNugget(client.get(), type);
+bool TestHarness::RebootNugget() {
+  return nugget_tools::RebootNugget(client.get());
 }
 
 void print_bin(std::ostream &out, uint8_t c) {
@@ -425,6 +472,23 @@ void TestHarness::Init(const char* path) {
     std::cout << "init() finish\n";
     std::cout.flush();
   }
+
+  if (FLAGS_util_print_uart) {
+    print_uart_worker = std::unique_ptr<std::thread>(new std::thread(
+        [](TestHarness* harness){
+          if (harness->getVerbosity() >= INFO) {
+            std::cout << "Citadel UART printing enabled!\n";
+            std::cout.flush();
+          }
+          while(harness->ttyState()) {
+            harness->PrintUntilClosed();
+          }
+          if (harness->getVerbosity() >= INFO) {
+            std::cout << "Citadel UART printing disabled!\n";
+            std::cout.flush();
+          }
+        }, this));
+  }
 }
 
 bool TestHarness::UsingSpi() const {
@@ -548,6 +612,10 @@ void TestHarness::BlockingWrite(const char* data, size_t len) {
 }
 
 string TestHarness::ReadLineUntilBlock() {
+  if (!ttyState()) {
+    return "";
+  }
+
   string line = "";
   line.reserve(128);
   char read_value = ' ';
@@ -589,6 +657,10 @@ string TestHarness::ReadUntil(microseconds end) {
   std::this_thread::sleep_for(end);
   return "";
 #else
+  if (!ttyState()) {
+    return "";
+  }
+
   char read_value = ' ';
   bool first = true;
   std::stringstream ss;
@@ -626,6 +698,53 @@ string TestHarness::ReadUntil(microseconds end) {
   }
 
   return ss.str();
+#endif  // CONFIG_NO_UART
+}
+
+void TestHarness::PrintUntilClosed() {
+#ifdef CONFIG_NO_UART
+#else
+  if (!ttyState()) {
+    return;
+  }
+
+  char read_value = ' ';
+  bool first = true;
+  std::stringstream ss("UART: ");
+
+  while (ttyState()) {
+    errno = 0;
+    while (read(tty_fd, &read_value, 1) > 0) {
+      first = false;
+      if (read_value == '\r')
+        continue;
+      if (read_value == '\n') {
+        ss << "\n";
+        std::cout.flush();
+        std::cout << ss.str();
+        std::cout.flush();
+        ss.str("");
+        ss << "UART: ";
+      } else {
+        print_bin(ss, read_value);
+      }
+    }
+    if (verbosity >= CRITICAL && errno != 0 && errno != EAGAIN) {
+      if (errno != EBADF) {
+        perror("ERROR read()");
+      }
+      break;
+    }
+
+    /* Wait for at least one bit time before checking read() again. */
+    std::this_thread::sleep_for(BIT_TIME);
+  }
+  if (!first) {
+    ss << "\n";
+    std::cout.flush();
+    std::cout << ss.str();
+    std::cout.flush();
+  }
 #endif  // CONFIG_NO_UART
 }
 
