@@ -15,6 +15,7 @@
 #include "openssl/bn.h"
 #include "openssl/ec_key.h"
 #include "openssl/nid.h"
+#include "openssl/sha.h"
 
 using std::cout;
 using std::string;
@@ -220,6 +221,9 @@ TEST_F(ImportWrappedKeyTest, ImportSuccess) {
   blob.b.tee_enforced.params[1].tag = Tag::PURPOSE;
   blob.b.tee_enforced.params[1].integer = KeyPurpose::WRAP_KEY;
   blob.b.tee_enforced.params_count++;
+  SHA256(reinterpret_cast<const uint8_t *>(&blob),
+         sizeof(struct km_blob) - SHA256_DIGEST_LENGTH,
+         reinterpret_cast<uint8_t *>(&blob.hmac));
 
   request.set_key_format(KeyFormat::RAW);
   KeyParameters *params = request.mutable_params();

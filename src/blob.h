@@ -45,7 +45,7 @@ struct blob_ec {
 
 struct blob_sym {
 	uint32_t key_bits;
-	uint8_t bytes[512 >> 3];
+	uint8_t bytes[2048 >> 3];
 } __attribute__((packed));
 
 enum blob_alg {
