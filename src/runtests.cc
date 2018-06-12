@@ -76,7 +76,7 @@ unique_ptr<TestHarness> NuggetOsTest::harness;
 std::random_device NuggetOsTest::random_number_generator;
 
 void NuggetOsTest::SetUpTestCase() {
-  harness = unique_ptr<TestHarness>(new TestHarness());
+  harness = TestHarness::MakeUnique();
 
 #ifndef CONFIG_NO_UART
   if (!harness->UsingSpi()) {

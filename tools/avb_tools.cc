@@ -24,6 +24,28 @@ using namespace nugget::app::avb;
 
 namespace avb_tools {
 
+void SetBootloader(nos::NuggetClientInterface *client)
+{
+  // Force AVB to believe that the AP is in the BIOS.
+  ::nos::AppClient app(*client, APP_ID_AVB_TEST);
+
+  /* We have to have a buffer, because it's called by reference. */
+  std::vector<uint8_t> buffer;
+
+  // No params, no args needed. This is all that the fake "AVB_TEST" app does.
+  uint32_t retval = app.Call(0, buffer, &buffer);
+
+  EXPECT_EQ(retval, APP_SUCCESS);
+}
+
+void BootloaderDone(nos::NuggetClientInterface *client)
+{
+  BootloaderDoneRequest request;
+
+  Avb service(*client);
+  ASSERT_NO_ERROR(service.BootloaderDone(request, nullptr), "");
+}
+
 void GetState(nos::NuggetClientInterface *client, bool *bootloader,
                  bool *production, uint8_t *locks) {
   GetStateRequest request;
