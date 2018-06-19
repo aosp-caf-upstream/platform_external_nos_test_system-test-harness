@@ -58,8 +58,7 @@ class NuggetOsTest: public testing::Test {
 unique_ptr<test_harness::TestHarness> NuggetOsTest::harness;
 
 void NuggetOsTest::SetUpTestCase() {
-  harness = unique_ptr<test_harness::TestHarness>(
-      new test_harness::TestHarness());
+  harness = TestHarness::MakeUnique();
 
   if (!harness->UsingSpi()) {
     EXPECT_TRUE(harness->SwitchFromConsoleToProtoApi());
@@ -109,10 +108,10 @@ TEST_F(NuggetOsTest, AesGcm) {
     ASSERT_NO_ERROR(harness->SendOneofProto(
         APImessageID::TESTING_API_CALL,
         OneofTestParametersCase::kAesGcmEncryptTest,
-        request));
+        request), "");
 
     test_harness::raw_message msg;
-    ASSERT_NO_ERROR(harness->GetData(&msg, 4096 * BYTE_TIME));
+    ASSERT_NO_ERROR(harness->GetData(&msg, 4096 * BYTE_TIME), "");
     ASSERT_MSG_TYPE(msg, APImessageID::TESTING_API_RESPONSE);
     ASSERT_SUBTYPE(msg, OneofTestResultsCase::kAesGcmEncryptTestResult);
 

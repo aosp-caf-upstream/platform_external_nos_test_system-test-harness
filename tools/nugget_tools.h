@@ -18,12 +18,16 @@
 
 namespace nugget_tools {
 
+std::string GetCitadelUSBSerialNo();
+
 std::unique_ptr<nos::NuggetClientInterface> MakeNuggetClient();
 
-bool RebootNugget(nos::NuggetClientInterface *client, uint8_t type);
+// Always does a hard reboot. Use WaitForSleep() if you just want deep sleep.
+bool RebootNugget(nos::NuggetClientInterface *client);
 
-// Returns an underestimate of the number of seconds waited.
-uint32_t WaitForSleep();
+// Returns true if Citadel entered deep sleep
+// Passes back an underestimate of the number of seconds waited if so.
+bool WaitForSleep(nos::NuggetClientInterface *client, uint32_t *seconds_waited);
 
 bool WipeUserData(nos::NuggetClientInterface *client);
 

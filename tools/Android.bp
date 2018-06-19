@@ -18,6 +18,7 @@ cc_library {
     name: "nugget_tools",
     srcs: [
         "avb_tools.cc",
+        "keymaster_tools.cc",
         "nugget_tools.cc",
     ],
     header_libs: [
@@ -33,6 +34,7 @@ cc_library {
         "libnosprotos",
         "libprotobuf-cpp-full",
         "nos_app_avb",
+        "nos_app_keymaster",
     ],
     defaults: ["nos_cc_defaults"],
     export_include_dirs: ["."],

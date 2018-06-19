@@ -1,9 +1,12 @@
 #include "gtest/gtest.h"
+#include "avb_tools.h"
+#include "keymaster_tools.h"
 #include "nugget_tools.h"
 #include "nugget/app/keymaster/keymaster.pb.h"
 #include "nugget/app/keymaster/keymaster_defs.pb.h"
 #include "nugget/app/keymaster/keymaster_types.pb.h"
 #include "Keymaster.client.h"
+#include "util.h"
 
 #include "src/blob.h"
 #include "src/macros.h"
@@ -12,6 +15,7 @@
 #include "openssl/bn.h"
 #include "openssl/ec_key.h"
 #include "openssl/nid.h"
+#include "openssl/sha.h"
 
 using std::cout;
 using std::string;
@@ -27,6 +31,7 @@ class ImportWrappedKeyTest: public testing::Test {
  protected:
   static unique_ptr<nos::NuggetClientInterface> client;
   static unique_ptr<Keymaster> service;
+  static unique_ptr<test_harness::TestHarness> uart_printer;
 
   static void SetUpTestCase();
   static void TearDownTestCase();
@@ -34,18 +39,26 @@ class ImportWrappedKeyTest: public testing::Test {
 
 unique_ptr<nos::NuggetClientInterface> ImportWrappedKeyTest::client;
 unique_ptr<Keymaster> ImportWrappedKeyTest::service;
+unique_ptr<test_harness::TestHarness> ImportWrappedKeyTest::uart_printer;
 
 void ImportWrappedKeyTest::SetUpTestCase() {
+  uart_printer = test_harness::TestHarness::MakeUnique();
+
   client = nugget_tools::MakeNuggetClient();
   client->Open();
   EXPECT_TRUE(client->IsOpen()) << "Unable to connect";
 
   service.reset(new Keymaster(*client));
+
+  // Do setup that is normally done by the bootloader.
+  keymaster_tools::SetRootOfTrust(client.get());
 }
 
 void ImportWrappedKeyTest::TearDownTestCase() {
   client->Close();
   client = unique_ptr<nos::NuggetClientInterface>();
+
+  uart_printer = nullptr;
 }
 
 /* Wrapped key DER just for reference; fields below have been pulled
@@ -208,6 +221,9 @@ TEST_F(ImportWrappedKeyTest, ImportSuccess) {
   blob.b.tee_enforced.params[1].tag = Tag::PURPOSE;
   blob.b.tee_enforced.params[1].integer = KeyPurpose::WRAP_KEY;
   blob.b.tee_enforced.params_count++;
+  SHA256(reinterpret_cast<const uint8_t *>(&blob),
+         sizeof(struct km_blob) - SHA256_DIGEST_LENGTH,
+         reinterpret_cast<uint8_t *>(&blob.hmac));
 
   request.set_key_format(KeyFormat::RAW);
   KeyParameters *params = request.mutable_params();

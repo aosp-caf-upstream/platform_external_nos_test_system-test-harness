@@ -4,6 +4,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include <google/protobuf/message.h>
@@ -62,6 +63,8 @@ class TestHarness {
     INFO = 40,
   };
 
+  static std::unique_ptr<TestHarness> MakeUnique();
+
   TestHarness();
   /**
    * @param path The device path to the tty (e.g. "/dev/tty1"). */
@@ -80,8 +83,9 @@ class TestHarness {
   void flushConsole();
   /** Reads from tty until the specified duration has passed. */
   string ReadUntil(std::chrono::microseconds end);
+  void PrintUntilClosed();
 
-  bool RebootNugget(uint8_t type);
+  bool RebootNugget();
 
   int SendData(const raw_message& msg);
   int SendOneofProto(uint16_t type, uint16_t subtype,
@@ -129,6 +133,8 @@ class TestHarness {
   unique_ptr<nos::NuggetClientInterface> client;
   int SendSpi(const raw_message& msg);
   int GetSpi(raw_message* msg, std::chrono::microseconds timeout);
+
+  std::unique_ptr<std::thread> print_uart_worker;
 };
 
 void FatalError(const string& msg);
