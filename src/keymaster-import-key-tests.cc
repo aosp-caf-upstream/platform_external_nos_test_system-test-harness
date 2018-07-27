@@ -250,6 +250,96 @@ TEST_F(ImportKeyTest, RSASuccess) {
   }
 }
 
+TEST_F(ImportKeyTest, UpgradeSuccess) {
+  ImportKeyRequest request;
+  ImportKeyResponse response;
+
+  initRSARequest(&request, Algorithm::RSA);
+  KeyParameters *params = request.mutable_params();
+  KeyParameter *param = params->add_params();
+
+  param->set_tag(Tag::RSA_PUBLIC_EXPONENT);
+  param->set_long_integer(TEST_RSA_KEYS[0].e);
+
+  request.mutable_rsa()->set_e(TEST_RSA_KEYS[0].e);
+  request.mutable_rsa()->set_d(TEST_RSA_KEYS[0].d, TEST_RSA_KEYS[0].size);
+  request.mutable_rsa()->set_n(TEST_RSA_KEYS[0].n, TEST_RSA_KEYS[0].size);
+
+  {
+    EXPECT_TRUE(nugget_tools::RebootNugget(client.get()))
+        << "Failed to reboot nugget";
+
+    SetSystemVersionInfoRequest svRequest;
+    SetSystemVersionInfoResponse svResponse;
+
+    svRequest.set_system_version(1);
+    svRequest.set_system_security_level(1);
+    svRequest.set_vendor_security_level(1);
+
+    ASSERT_NO_ERROR(service->SetSystemVersionInfo(svRequest, &svResponse), "");
+    EXPECT_EQ((ErrorCode)svResponse.error_code(), ErrorCode::OK);
+
+    // Do setup that is normally done by the bootloader.
+    keymaster_tools::SetRootOfTrust(client.get());
+    keymaster_tools::SetBootState(client.get());
+  }
+
+  stringstream ss;
+  ASSERT_NO_ERROR(service->ImportKey(request, &response), "");
+  EXPECT_EQ((ErrorCode)response.error_code(), ErrorCode::OK)
+    << "Failed at TEST_RSA_KEYS[" << 0 << "]";
+
+  {
+    EXPECT_TRUE(nugget_tools::RebootNugget(client.get()))
+      << "Failed to reboot nugget";
+
+    SetSystemVersionInfoRequest svRequest;
+    SetSystemVersionInfoResponse svResponse;
+
+    /* Bump vendor version level, to force Upgrade. */
+    svRequest.set_system_version(1);
+    svRequest.set_system_security_level(1);
+    svRequest.set_vendor_security_level(2);
+
+    ASSERT_NO_ERROR(service->SetSystemVersionInfo(svRequest, &svResponse), "");
+    EXPECT_EQ((ErrorCode)svResponse.error_code(), ErrorCode::OK);
+
+    // Do setup that is normally done by the bootloader.
+    keymaster_tools::SetRootOfTrust(client.get());
+    keymaster_tools::SetBootState(client.get());
+  }
+
+  {
+    GetKeyCharacteristicsRequest gkRequest;
+    GetKeyCharacteristicsResponse gkResponse;
+
+    gkRequest.mutable_blob()->set_blob(response.blob().blob().data(),
+                                       response.blob().blob().size());
+    ASSERT_NO_ERROR(service->GetKeyCharacteristics(gkRequest, &gkResponse), "");
+    EXPECT_EQ((ErrorCode)gkResponse.error_code(),
+              ErrorCode::KEY_REQUIRES_UPGRADE);
+  }
+
+  {
+    UpgradeKeyRequest ukRequest;
+    UpgradeKeyResponse ukResponse;
+
+    ukRequest.mutable_blob()->set_blob(response.blob().blob().data(),
+                                       response.blob().blob().size());
+    ASSERT_NO_ERROR(service->UpgradeKey(ukRequest, &ukResponse), "");
+    EXPECT_EQ((ErrorCode)ukResponse.error_code(), ErrorCode::OK);
+
+    // GetKeyCharacteristics succeeds after the UpgradeKey().
+    GetKeyCharacteristicsRequest gkRequest;
+    GetKeyCharacteristicsResponse gkResponse;
+
+    gkRequest.mutable_blob()->set_blob(ukResponse.blob().blob().data(),
+                                       ukResponse.blob().blob().size());
+    ASSERT_NO_ERROR(service->GetKeyCharacteristics(gkRequest, &gkResponse), "");
+    EXPECT_EQ((ErrorCode)gkResponse.error_code(), ErrorCode::OK);
+  }
+}
+
 TEST_F(ImportKeyTest, RSA1024OptionalParamsAbsentSuccess) {
   ImportKeyRequest request;
   ImportKeyResponse response;
