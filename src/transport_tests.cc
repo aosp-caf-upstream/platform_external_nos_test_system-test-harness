@@ -176,10 +176,20 @@ bool StatusMatches(const transport_status& arg, uint32_t status, uint16_t flags,
   ok &= arg.version == TRANSPORT_V1;
   ok &= arg.flags == flags;
 
+  // Check the status is a valid length
+  if (arg.length < STATUS_MIN_LENGTH || arg.length > STATUS_MAX_LENGTH) {
+    return false;
+  }
+
+  // As of v1, the length shouldn\t be greater than transport_status
+  if (arg.length > sizeof(transport_status)) {
+    return false;
+  }
+
+  // Check the CRCs are valid
   transport_status st = arg;
   st.crc = 0;
   ok &= arg.crc == crc16(&st, st.length);
-
   ok &= arg.reply_crc == crc16(reply, reply_len);
 
   return ok;
