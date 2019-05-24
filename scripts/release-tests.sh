@@ -25,12 +25,10 @@ function keymaster_cts_tests() {
 function keymaster_vts_tests() {
     m -j VtsHalKeymasterV4_0TargetTest || return 1
     adb sync data || return 1
-    # TODO(b/109771020): remove test filter below.
     adb shell \
         /data/nativetest64/VtsHalKeymasterV4_0TargetTest/VtsHalKeymasterV4_0TargetTest \
         --verbose \
-        --hal_service_instance=android.hardware.keymaster@4.0::IKeymasterDevice/strongbox \
-        --gtest_filter=-EncryptionOperationsTest.RsaNoPaddingShortMessage || return 1
+        --hal_service_instance=android.hardware.keymaster@4.0::IKeymasterDevice/strongbox || return 1
 }
 
 function weaver_cts_tests() {
